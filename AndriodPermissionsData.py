@@ -406,3 +406,103 @@ def _build_summary_text(self, df):
 
 def on_top_n_change(self, event):
         self.top_n = int(self.top_n_choice.GetStringSelection())
+
+def on_generate_graphs(self, event):
+        if self.df is None or self._busy:
+            return
+
+        perm_cols = [
+            c for c in self.df.columns
+            if c != self.result_col and pd.api.types.is_numeric_dtype(self.df[c])
+        ]
+        if not perm_cols:
+            wx.MessageBox("No numeric permission columns found.", "Error", wx.OK | wx.ICON_ERROR)
+            return
+
+        malware_df = self.df[self.df[self.result_col] == 1][perm_cols]
+        benign_df  = self.df[self.df[self.result_col] == 0][perm_cols]
+
+        if malware_df.empty or benign_df.empty:
+            wx.MessageBox("Both malware and benign samples are required.", "Error", wx.OK | wx.ICON_ERROR)
+            return
+
+        self._set_busy(True, "Computing graph data...")
+        threading.Thread(
+            target=self._bg_compute_graphs,
+            args=(malware_df, benign_df, np.array(perm_cols)),
+            daemon=True
+        ).start()
+
+    def _bg_compute_graphs(self, malware_df, benign_df, permission_names):
+        n             = min(self.top_n, len(permission_names))
+        malware_array = malware_df.to_numpy()
+        benign_array  = benign_df.to_numpy()
+        n_mal         = len(malware_df)
+        n_ben         = len(benign_df)
+
+        mal_counts = np.sum(malware_array, axis=0)
+        mal_idx    = np.argsort(mal_counts)[-n:]
+        mal_names  = [self.shorten_permission(permission_names[i]) for i in mal_idx]
+        mal_vals   = mal_counts[mal_idx].tolist()
+
+        ben_counts = np.sum(benign_array, axis=0)
+        ben_idx    = np.argsort(ben_counts)[-n:]
+        ben_names  = [self.shorten_permission(permission_names[i]) for i in ben_idx]
+        ben_vals   = ben_counts[ben_idx].tolist()
+
+        difference = np.mean(malware_array, axis=0) - np.mean(benign_array, axis=0)
+        cmp_idx    = np.argsort(difference)[-n:]
+        cmp_names  = [self.shorten_permission(permission_names[i]) for i in cmp_idx]
+        cmp_vals   = difference[cmp_idx].tolist()
+
+        wx.CallAfter(self._on_graph_data_ready, dict(
+            n=n, n_mal=n_mal, n_ben=n_ben,
+            mal_names=mal_names, mal_vals=mal_vals,
+            ben_names=ben_names, ben_vals=ben_vals,
+            cmp_names=cmp_names, cmp_vals=cmp_vals,
+        ))
+
+    def _on_graph_data_ready(self, d):
+        n, n_mal, n_ben = d["n"], d["n_mal"], d["n_ben"]
+
+        self.malware_fig.clear()
+        ax1 = self.malware_fig.add_subplot(111)
+        bars = ax1.barh(d["mal_names"], d["mal_vals"], color="#d62728")
+        ax1.bar_label(bars, fmt="%g", padding=3, fontsize=8)
+        ax1.set_title("Top {} Most Common Malware Permissions  (n={})".format(n, n_mal), fontsize=11)
+        ax1.set_xlabel("Frequency (# apps)")
+        ax1.margins(x=0.12)
+        self.malware_fig.tight_layout()
+        self.malware_canvas.draw()
+
+        self.benign_fig.clear()
+        ax2 = self.benign_fig.add_subplot(111)
+        bars2 = ax2.barh(d["ben_names"], d["ben_vals"], color="#2ca02c")
+        ax2.bar_label(bars2, fmt="%g", padding=3, fontsize=8)
+        ax2.set_title("Top {} Most Common Benign Permissions  (n={})".format(n, n_ben), fontsize=11)
+        ax2.set_xlabel("Frequency (# apps)")
+        ax2.margins(x=0.12)
+        self.benign_fig.tight_layout()
+        self.benign_canvas.draw()
+
+        cmp_vals   = d["cmp_vals"]
+        cmp_colors = ["#d62728" if v >= 0 else "#2ca02c" for v in cmp_vals]
+        self.compare_fig.clear()
+        ax3 = self.compare_fig.add_subplot(111)
+        bars3 = ax3.barh(d["cmp_names"], cmp_vals, color=cmp_colors)
+        ax3.bar_label(bars3, fmt="%.3f", padding=3, fontsize=8)
+        ax3.axvline(0, color="black", linewidth=0.8, linestyle="--")
+        ax3.set_title(
+            "Top {} Permissions Most Indicative of Malware\n"
+            "(prevalence difference: malware rate - benign rate)".format(n),
+            fontsize=11
+        )
+        ax3.set_xlabel("Prevalence difference")
+        ax3.margins(x=0.15)
+        self.compare_fig.tight_layout()
+        self.compare_canvas.draw()
+
+        self._graphs_generated = True
+        self._set_busy(False)
+        self.SetStatusText("Graphs generated.", 0)
+        self.notebook.SetSelection(2)

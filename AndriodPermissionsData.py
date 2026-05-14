@@ -324,3 +324,43 @@ def _make_graph_tab(self):
     def _on_load_error(self, msg):
         self._set_busy(False)
         wx.MessageBox(msg, "Error", wx.OK | wx.ICON_ERROR)
+
+def on_col_filter(self, event):
+        if self.df is None or self._busy:
+            return
+        query = self.col_search.GetValue().strip()
+        if query == self._col_filter:
+            return                          # no change
+        self._col_filter = query
+        self._set_busy(True, "Filtering columns...")
+        sample = self.df.head(SAMPLE_ROWS)
+        threading.Thread(
+            target=self._bg_col_filter, args=(sample, query), daemon=True
+        ).start()
+
+    def _bg_col_filter(self, sample, query):
+        col_labels, cell_data = self._filter_and_stringify(sample, query)
+        wx.CallAfter(self._apply_col_filter, col_labels, cell_data, query)
+
+    def _apply_col_filter(self, col_labels, cell_data, query):
+        self._write_grid(col_labels, cell_data)
+        total_cols   = len(self.df.columns)
+        visible_cols = len(col_labels)
+        total_rows   = len(self.df)
+        shown_rows   = len(cell_data)
+        if query:
+            self.SetStatusText(
+                "Showing {} of {} cols, {} of {} rows".format(
+                    visible_cols, total_cols, shown_rows, total_rows
+                ), 1
+            )
+        else:
+            self.SetStatusText(
+                "Showing {} of {} rows, {} cols".format(shown_rows, total_rows, total_cols), 1
+            )
+        self._set_busy(False)
+
+    def on_col_filter_cancel(self, event):
+        self.col_search.SetValue("")
+        self.on_col_filter(event)
+        

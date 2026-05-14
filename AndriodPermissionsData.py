@@ -137,3 +137,16 @@ self.notebook = wx.Notebook(panel)
         )
         summary_sizer.Add(self.summary_text, 1, wx.EXPAND | wx.ALL, 5)
         self.summary_tab.SetSizer(summary_sizer)
+
+
+        self.malware_tab, self.malware_fig, self.malware_canvas = self._make_graph_tab()
+        self.benign_tab,  self.benign_fig,  self.benign_canvas  = self._make_graph_tab()
+        self.compare_tab, self.compare_fig, self.compare_canvas = self._make_graph_tab()
+
+        self.notebook.AddPage(self.data_tab,    "Dataset (sample)")
+        self.notebook.AddPage(self.summary_tab, "Summary")
+        self.notebook.AddPage(self.malware_tab, "Malware")
+        self.notebook.AddPage(self.benign_tab,  "Benign")
+        self.notebook.AddPage(self.compare_tab, "Comparison")
+
+        main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)

@@ -115,3 +115,12 @@ class MainFrame(wx.Frame):
         main_sizer.Add(tb, 0, wx.LEFT | wx.TOP, 4)
 
 self.notebook = wx.Notebook(panel)
+
+    
+        self.data_tab  = wx.Panel(self.notebook)
+        data_sizer     = wx.BoxSizer(wx.VERTICAL)
+        self.grid      = gridlib.Grid(self.data_tab)
+        self.grid.CreateGrid(1, 1)
+        self.grid.EnableEditing(False)
+        data_sizer.Add(self.grid, 1, wx.EXPAND | wx.ALL, 5)
+        self.data_tab.SetSizer(data_sizer)

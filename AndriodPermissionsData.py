@@ -364,3 +364,42 @@ def on_col_filter(self, event):
         self.col_search.SetValue("")
         self.on_col_filter(event)
         
+def _build_summary_text(self, df):
+        total     = len(df)
+        malware_n = int((df[self.result_col] == 1).sum())
+        benign_n  = int((df[self.result_col] == 0).sum())
+
+        perm_cols         = [c for c in df.columns if c != self.result_col]
+        numeric_perm_cols = [c for c in perm_cols if pd.api.types.is_numeric_dtype(df[c])]
+
+        lines = [
+            "=" * 52,
+            " DATASET SUMMARY",
+            "=" * 52,
+            "  Total samples       : {}".format(total),
+            "  Malware  (label=1)  : {}  ({:.1f}%)".format(malware_n, malware_n / total * 100),
+            "  Benign   (label=0)  : {}  ({:.1f}%)".format(benign_n,  benign_n  / total * 100),
+            "  Total columns       : {}".format(len(df.columns)),
+            "  Permission columns  : {}".format(len(perm_cols)),
+            "  Numeric perm cols   : {}".format(len(numeric_perm_cols)),
+            "  Dataset tab shows   : first {} rows".format(SAMPLE_ROWS),
+            "",
+        ]
+
+        if numeric_perm_cols:
+            perm_array  = df[numeric_perm_cols].to_numpy()
+            used        = np.sum(perm_array, axis=0)
+            used_count  = int(np.sum(used > 0))
+            lines += [
+                "  Permissions used >=1x: {} / {}".format(used_count, len(numeric_perm_cols)),
+                "",
+                "-" * 52,
+                " TOP 10 MOST FREQUENT PERMISSIONS (ALL APPS)",
+                "-" * 52,
+            ]
+            top10_idx = np.argsort(used)[-10:][::-1]
+            for rank, i in enumerate(top10_idx, 1):
+                short = self.shorten_permission(numeric_perm_cols[i])
+                lines.append("  {:2}. {:<38} {}".format(rank, short, int(used[i])))
+
+        return "\n".join(lines)

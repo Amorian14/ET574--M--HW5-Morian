@@ -79,3 +79,13 @@ class MainFrame(wx.Frame):
         self.export_btn = wx.Button(panel, label="Export Graphs...")
         self.export_btn.Bind(wx.EVT_BUTTON, self.export_graphs)
         self.export_btn.Disable()
+
+
+        tb.Add(wx.StaticText(panel, label="  Top N:"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+        self.top_n_choice = wx.Choice(
+            panel,
+            choices=["5", "10", "15", "20", "25", "30"],
+            size=(70, -1)
+        )
+        self.top_n_choice.SetStringSelection("10")
+        self.top_n_choice.Bind(wx.EVT_CHOICE, self.on_top_n_change)

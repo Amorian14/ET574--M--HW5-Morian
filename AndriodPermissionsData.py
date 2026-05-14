@@ -47,9 +47,6 @@ class ColumnPickerDialog(wx.Dialog):
     def get_selected_column(self):
         return self.choice.GetString(self.choice.GetSelection())
 
-# =====================================
-# MAIN FRAME
-# =====================================
 
 class MainFrame(wx.Frame):
 

@@ -200,3 +200,127 @@ def _make_graph_tab(self):
                 name = name[len(prefix):]
                 break
         return name if len(name) <= 40 else name[:37] + "..."
+
+ def on_load_csv(self, event):
+        if self._busy:
+            return
+        with wx.FileDialog(
+            self, "Open CSV File",
+            wildcard="CSV files (*.csv)|*.csv",
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+        ) as dlg:
+            if dlg.ShowModal() == wx.ID_CANCEL:
+                return
+            path = dlg.GetPath()
+
+        self._set_busy(True, "Reading {}...".format(os.path.basename(path)))
+        threading.Thread(target=self._bg_read_csv, args=(path,), daemon=True).start()
+
+    def _bg_read_csv(self, path):
+        try:
+            df = pd.read_csv(path)
+        except Exception as exc:
+            wx.CallAfter(self._on_load_error, "Failed to read CSV:\n{}".format(exc))
+            return
+        if df.empty:
+            wx.CallAfter(self._on_load_error, "The CSV file is empty.")
+            return
+        wx.CallAfter(self._resolve_label_column, df, path)
+
+    def _resolve_label_column(self, df, path):
+        if "Result" in df.columns:
+            result_col = "Result"
+        else:
+            with ColumnPickerDialog(self, df.columns) as picker:
+                if picker.ShowModal() == wx.ID_CANCEL:
+                    self._set_busy(False)
+                    self.SetStatusText("Load cancelled.", 0)
+                    return
+                result_col = picker.get_selected_column()
+
+        unique_vals = df[result_col].dropna().unique()
+        if not set(unique_vals).issubset({0, 1}):
+            self._on_load_error(
+                "Column '{}' must contain only 0 and 1.\nFound: {}".format(
+                    result_col, sorted(unique_vals)[:10]
+                )
+            )
+            return
+
+        self.result_col  = result_col
+        self._col_filter = ""
+        self._set_busy(True, "Building sample table...")
+        threading.Thread(
+            target=self._bg_build_grid, args=(df, path), daemon=True
+        ).start()
+
+    def _bg_build_grid(self, df, path):
+        """Background: take a sample, apply any column filter, stringify, build summary."""
+        sample      = df.head(SAMPLE_ROWS)
+        col_labels, cell_data = self._filter_and_stringify(sample, self._col_filter)
+        summary     = self._build_summary_text(df)
+        wx.CallAfter(self._on_grid_ready, df, path, col_labels, cell_data, summary)
+
+    def _filter_and_stringify(self, sample_df, col_query):
+        """Return (col_labels, cell_data) after applying the column name filter."""
+        if col_query:
+            q = col_query.lower()
+            cols = [c for c in sample_df.columns if q in c.lower()]
+        else:
+            cols = list(sample_df.columns)
+
+        col_labels = cols
+        cell_data  = [
+            [str(sample_df.iat[r, sample_df.columns.get_loc(c)]) for c in cols]
+            for r in range(len(sample_df))
+        ]
+        return col_labels, cell_data
+
+    def _on_grid_ready(self, df, path, col_labels, cell_data, summary):
+        """Main thread: write sample into the grid."""
+        self._write_grid(col_labels, cell_data)
+
+        self.df = df
+        self.col_search.SetValue("")
+        self._col_filter = ""
+        self.summary_text.SetValue(summary)
+        self._graphs_generated = False
+
+        total_rows = len(df)
+        shown_rows = len(cell_data)
+        total_cols = len(df.columns)
+        fname = os.path.basename(path)
+
+        self.SetStatusText("Loaded: {}".format(fname), 0)
+        self.SetStatusText(
+            "Showing {} of {} rows, {} cols".format(shown_rows, total_rows, total_cols), 1
+        )
+        self._set_busy(False)
+
+    def _write_grid(self, col_labels, cell_data):
+        """Write a col_labels / cell_data pair into the wx.Grid (main thread only)."""
+        rows = len(cell_data)
+        cols = len(col_labels)
+
+        self.grid.BeginBatch()
+        try:
+            if self.grid.GetNumberRows() > 0:
+                self.grid.DeleteRows(0, self.grid.GetNumberRows())
+            if self.grid.GetNumberCols() > 0:
+                self.grid.DeleteCols(0, self.grid.GetNumberCols())
+            if rows:
+                self.grid.AppendRows(rows)
+            if cols:
+                self.grid.AppendCols(cols)
+            for c, label in enumerate(col_labels):
+                self.grid.SetColLabelValue(c, label)
+            for r, row_vals in enumerate(cell_data):
+                for c, val in enumerate(row_vals):
+                    self.grid.SetCellValue(r, c, val)
+            self.grid.AutoSizeColumns()
+        finally:
+            self.grid.EndBatch()
+
+    def _on_load_error(self, msg):
+        self._set_busy(False)
+        wx.MessageBox(msg, "Error", wx.OK | wx.ICON_ERROR)

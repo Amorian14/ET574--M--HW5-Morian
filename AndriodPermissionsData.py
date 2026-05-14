@@ -113,3 +113,5 @@ class MainFrame(wx.Frame):
             tb.Add(widget, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
 
         main_sizer.Add(tb, 0, wx.LEFT | wx.TOP, 4)
+
+self.notebook = wx.Notebook(panel)

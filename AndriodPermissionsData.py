@@ -159,3 +159,44 @@ self.notebook = wx.Notebook(panel)
         panel.SetSizer(main_sizer)
         self.Centre()
         self.Show()
+
+def _make_graph_tab(self):
+        tab    = wx.Panel(self.notebook)
+        fig    = Figure(figsize=(8, 6))
+        canvas = FigureCanvas(tab, -1, fig)
+        sizer  = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(canvas, 1, wx.EXPAND)
+        tab.SetSizer(sizer)
+        return tab, fig, canvas
+
+    def _set_busy(self, busy, status_msg=""):
+        self._busy = busy
+        self.load_btn.Enable(not busy)
+        self.graph_btn.Enable(not busy and self.df is not None)
+        self.export_btn.Enable(not busy and self._graphs_ready())
+        if busy:
+            self.gauge.Show()
+            self.gauge.Pulse()
+            self.SetStatusText(status_msg, 0)
+        else:
+            self.gauge.Hide()
+            self.gauge.SetValue(0)
+        self.Layout()
+
+    def _graphs_ready(self):
+        return getattr(self, "_graphs_generated", False)
+
+    def shorten_permission(self, name):
+        for prefix in [
+            "android.permission.",
+            "android.hardware.",
+            "android.intent.action.",
+            "com.android.launcher.permission.",
+            "com.android.",
+            "com.google.android.",
+            "com.google.",
+        ]:
+            if name.startswith(prefix):
+                name = name[len(prefix):]
+                break
+        return name if len(name) <= 40 else name[:37] + "..."

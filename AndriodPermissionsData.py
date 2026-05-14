@@ -10,4 +10,4 @@ import numpy as np
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-SAMPLE_ROWS = 100   # how many rows to show in the Dataset tab
+SAMPLE_ROWS = 100 

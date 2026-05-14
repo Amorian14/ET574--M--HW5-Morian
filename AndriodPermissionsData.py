@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-SAMPLE_ROWS = 100   # how many rows to show in the Dataset tab
+SAMPLE_ROWS = 100   
 
 
 
@@ -47,3 +47,22 @@ class ColumnPickerDialog(wx.Dialog):
     def get_selected_column(self):
         return self.choice.GetString(self.choice.GetSelection())
 
+
+
+class MainFrame(wx.Frame):
+
+    def __init__(self):
+        super().__init__(
+            parent=None,
+            title="Android Permission Visualizer",
+            size=(1400, 860)
+        )
+
+        self.df          = None   
+        self.result_col  = "Result"
+        self.top_n       = 10
+        self._busy       = False
+        self._col_filter = ""     
+
+        panel     = wx.Panel(self)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)

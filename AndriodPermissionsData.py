@@ -97,3 +97,19 @@ class MainFrame(wx.Frame):
         self.col_search.Bind(wx.EVT_SEARCH,        self.on_col_filter)
         self.col_search.Bind(wx.EVT_SEARCH_CANCEL, self.on_col_filter_cancel)
         self.col_search.Bind(wx.EVT_TEXT,          self.on_col_filter)
+
+
+        self.gauge = wx.Gauge(panel, range=100, size=(140, 16),
+                              style=wx.GA_HORIZONTAL | wx.GA_SMOOTH)
+        self.gauge.Hide()
+
+        for widget in (
+            self.load_btn, self.graph_btn, self.export_btn,
+            self.top_n_choice,
+            wx.StaticText(panel, label="  Filter columns:"),
+            self.col_search,
+            self.gauge,
+        ):
+            tb.Add(widget, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+
+        main_sizer.Add(tb, 0, wx.LEFT | wx.TOP, 4)

@@ -124,3 +124,16 @@ self.notebook = wx.Notebook(panel)
         self.grid.EnableEditing(False)
         data_sizer.Add(self.grid, 1, wx.EXPAND | wx.ALL, 5)
         self.data_tab.SetSizer(data_sizer)
+
+
+        self.summary_tab  = wx.Panel(self.notebook)
+        summary_sizer     = wx.BoxSizer(wx.VERTICAL)
+        self.summary_text = wx.TextCtrl(
+            self.summary_tab,
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.HSCROLL
+        )
+        self.summary_text.SetFont(
+            wx.Font(11, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        )
+        summary_sizer.Add(self.summary_text, 1, wx.EXPAND | wx.ALL, 5)
+        self.summary_tab.SetSizer(summary_sizer)

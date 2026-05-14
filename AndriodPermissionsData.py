@@ -150,3 +150,12 @@ self.notebook = wx.Notebook(panel)
         self.notebook.AddPage(self.compare_tab, "Comparison")
 
         main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
+
+
+        self.status = self.CreateStatusBar(2)
+        self.status.SetStatusWidths([-1, 260])
+        self.SetStatusText("No file loaded.", 0)
+
+        panel.SetSizer(main_sizer)
+        self.Centre()
+        self.Show()

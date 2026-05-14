@@ -403,3 +403,6 @@ def _build_summary_text(self, df):
                 lines.append("  {:2}. {:<38} {}".format(rank, short, int(used[i])))
 
         return "\n".join(lines)
+
+def on_top_n_change(self, event):
+        self.top_n = int(self.top_n_choice.GetStringSelection())

@@ -506,3 +506,31 @@ def on_generate_graphs(self, event):
         self._set_busy(False)
         self.SetStatusText("Graphs generated.", 0)
         self.notebook.SetSelection(2)
+
+
+def export_graphs(self, event):
+        with wx.DirDialog(
+            self, "Choose export folder",
+            style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST
+        ) as dlg:
+            if dlg.ShowModal() == wx.ID_CANCEL:
+                return
+            folder = dlg.GetPath()
+
+        saved, errors = [], []
+        for fig, fname in [
+            (self.malware_fig, "malware_permissions.png"),
+            (self.benign_fig,  "benign_permissions.png"),
+            (self.compare_fig, "comparison_permissions.png"),
+        ]:
+            fpath = os.path.join(folder, fname)
+            try:
+                fig.savefig(fpath, dpi=150, bbox_inches="tight")
+                saved.append(fname)
+            except Exception as exc:
+                errors.append("{}: {}".format(fname, exc))
+
+        msg = "Saved {} file(s) to:\n{}".format(len(saved), folder)
+        if errors:
+            msg += "\n\nErrors:\n" + "\n".join(errors)
+        wx.MessageBox(msg, "Export complete", wx.OK | wx.ICON_INFORMATION)

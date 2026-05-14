@@ -89,3 +89,11 @@ class MainFrame(wx.Frame):
         )
         self.top_n_choice.SetStringSelection("10")
         self.top_n_choice.Bind(wx.EVT_CHOICE, self.on_top_n_change)
+
+
+        self.col_search = wx.SearchCtrl(panel, size=(220, -1))
+        self.col_search.SetDescriptiveText("Filter columns...")
+        self.col_search.ShowCancelButton(True)
+        self.col_search.Bind(wx.EVT_SEARCH,        self.on_col_filter)
+        self.col_search.Bind(wx.EVT_SEARCH_CANCEL, self.on_col_filter_cancel)
+        self.col_search.Bind(wx.EVT_TEXT,          self.on_col_filter)

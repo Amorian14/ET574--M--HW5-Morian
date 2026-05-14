@@ -64,3 +64,18 @@ class MainFrame(wx.Frame):
         self._col_filter = ""    
         panel     = wx.Panel(self)
         main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+
+
+        tb = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.load_btn = wx.Button(panel, label="Load CSV")
+        self.load_btn.Bind(wx.EVT_BUTTON, self.on_load_csv)
+
+        self.graph_btn = wx.Button(panel, label="Generate Graphs")
+        self.graph_btn.Bind(wx.EVT_BUTTON, self.on_generate_graphs)
+        self.graph_btn.Disable()
+
+        self.export_btn = wx.Button(panel, label="Export Graphs...")
+        self.export_btn.Bind(wx.EVT_BUTTON, self.export_graphs)
+        self.export_btn.Disable()

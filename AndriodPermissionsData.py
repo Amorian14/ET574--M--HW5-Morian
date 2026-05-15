@@ -1,8 +1,20 @@
 import threading
 import os
 
-import wx
-import wx.grid as gridlib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import wx  # type: ignore[import-not-found]
+    import wx.grid as gridlib  # type: ignore[import-not-found]
+else:
+    try:
+        import wx
+        import wx.grid as gridlib
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "wxPython is required to run this GUI. Install it (e.g., `pip install wxPython`) "
+            "or run this file in an environment where wxPython is available."
+        ) from exc
 
 import pandas as pd
 import numpy as np
@@ -114,9 +126,8 @@ class MainFrame(wx.Frame):
 
         main_sizer.Add(tb, 0, wx.LEFT | wx.TOP, 4)
 
-self.notebook = wx.Notebook(panel)
+        self.notebook = wx.Notebook(panel)
 
-    
         self.data_tab  = wx.Panel(self.notebook)
         data_sizer     = wx.BoxSizer(wx.VERTICAL)
         self.grid      = gridlib.Grid(self.data_tab)
@@ -124,7 +135,6 @@ self.notebook = wx.Notebook(panel)
         self.grid.EnableEditing(False)
         data_sizer.Add(self.grid, 1, wx.EXPAND | wx.ALL, 5)
         self.data_tab.SetSizer(data_sizer)
-
 
         self.summary_tab  = wx.Panel(self.notebook)
         summary_sizer     = wx.BoxSizer(wx.VERTICAL)
@@ -137,7 +147,6 @@ self.notebook = wx.Notebook(panel)
         )
         summary_sizer.Add(self.summary_text, 1, wx.EXPAND | wx.ALL, 5)
         self.summary_tab.SetSizer(summary_sizer)
-
 
         self.malware_tab, self.malware_fig, self.malware_canvas = self._make_graph_tab()
         self.benign_tab,  self.benign_fig,  self.benign_canvas  = self._make_graph_tab()
@@ -169,7 +178,7 @@ def _make_graph_tab(self):
         tab.SetSizer(sizer)
         return tab, fig, canvas
 
-    def _set_busy(self, busy, status_msg=""):
+def _set_busy(self, busy, status_msg=""):
         self._busy = busy
         self.load_btn.Enable(not busy)
         self.graph_btn.Enable(not busy and self.df is not None)
@@ -183,10 +192,10 @@ def _make_graph_tab(self):
             self.gauge.SetValue(0)
         self.Layout()
 
-    def _graphs_ready(self):
+def _graphs_ready(self):
         return getattr(self, "_graphs_generated", False)
 
-    def shorten_permission(self, name):
+def shorten_permission(self, name):
         for prefix in [
             "android.permission.",
             "android.hardware.",
@@ -201,7 +210,7 @@ def _make_graph_tab(self):
                 break
         return name if len(name) <= 40 else name[:37] + "..."
 
- def on_load_csv(self, event):
+def on_load_csv(self, event):
         if self._busy:
             return
         with wx.FileDialog(
@@ -216,7 +225,7 @@ def _make_graph_tab(self):
         self._set_busy(True, "Reading {}...".format(os.path.basename(path)))
         threading.Thread(target=self._bg_read_csv, args=(path,), daemon=True).start()
 
-    def _bg_read_csv(self, path):
+def _bg_read_csv(self, path):
         try:
             df = pd.read_csv(path)
         except Exception as exc:
@@ -227,7 +236,7 @@ def _make_graph_tab(self):
             return
         wx.CallAfter(self._resolve_label_column, df, path)
 
-    def _resolve_label_column(self, df, path):
+def _resolve_label_column(self, df, path):
         if "Result" in df.columns:
             result_col = "Result"
         else:
@@ -254,14 +263,14 @@ def _make_graph_tab(self):
             target=self._bg_build_grid, args=(df, path), daemon=True
         ).start()
 
-    def _bg_build_grid(self, df, path):
+def _bg_build_grid(self, df, path):
         """Background: take a sample, apply any column filter, stringify, build summary."""
         sample      = df.head(SAMPLE_ROWS)
         col_labels, cell_data = self._filter_and_stringify(sample, self._col_filter)
         summary     = self._build_summary_text(df)
         wx.CallAfter(self._on_grid_ready, df, path, col_labels, cell_data, summary)
 
-    def _filter_and_stringify(self, sample_df, col_query):
+def _filter_and_stringify(self, sample_df, col_query):
         """Return (col_labels, cell_data) after applying the column name filter."""
         if col_query:
             q = col_query.lower()
@@ -276,7 +285,7 @@ def _make_graph_tab(self):
         ]
         return col_labels, cell_data
 
-    def _on_grid_ready(self, df, path, col_labels, cell_data, summary):
+def _on_grid_ready(self, df, path, col_labels, cell_data, summary):
         """Main thread: write sample into the grid."""
         self._write_grid(col_labels, cell_data)
 
@@ -297,7 +306,7 @@ def _make_graph_tab(self):
         )
         self._set_busy(False)
 
-    def _write_grid(self, col_labels, cell_data):
+def _write_grid(self, col_labels, cell_data):
         """Write a col_labels / cell_data pair into the wx.Grid (main thread only)."""
         rows = len(cell_data)
         cols = len(col_labels)
@@ -321,7 +330,7 @@ def _make_graph_tab(self):
         finally:
             self.grid.EndBatch()
 
-    def _on_load_error(self, msg):
+def _on_load_error(self, msg):
         self._set_busy(False)
         wx.MessageBox(msg, "Error", wx.OK | wx.ICON_ERROR)
 
@@ -338,11 +347,11 @@ def on_col_filter(self, event):
             target=self._bg_col_filter, args=(sample, query), daemon=True
         ).start()
 
-    def _bg_col_filter(self, sample, query):
+def _bg_col_filter(self, sample, query):
         col_labels, cell_data = self._filter_and_stringify(sample, query)
         wx.CallAfter(self._apply_col_filter, col_labels, cell_data, query)
 
-    def _apply_col_filter(self, col_labels, cell_data, query):
+def _apply_col_filter(self, col_labels, cell_data, query):
         self._write_grid(col_labels, cell_data)
         total_cols   = len(self.df.columns)
         visible_cols = len(col_labels)
@@ -360,7 +369,7 @@ def on_col_filter(self, event):
             )
         self._set_busy(False)
 
-    def on_col_filter_cancel(self, event):
+def on_col_filter_cancel(self, event):
         self.col_search.SetValue("")
         self.on_col_filter(event)
         
@@ -433,7 +442,7 @@ def on_generate_graphs(self, event):
             daemon=True
         ).start()
 
-    def _bg_compute_graphs(self, malware_df, benign_df, permission_names):
+def _bg_compute_graphs(self, malware_df, benign_df, permission_names):
         n             = min(self.top_n, len(permission_names))
         malware_array = malware_df.to_numpy()
         benign_array  = benign_df.to_numpy()
@@ -462,7 +471,7 @@ def on_generate_graphs(self, event):
             cmp_names=cmp_names, cmp_vals=cmp_vals,
         ))
 
-    def _on_graph_data_ready(self, d):
+def _on_graph_data_ready(self, d):
         n, n_mal, n_ben = d["n"], d["n_mal"], d["n_ben"]
 
         self.malware_fig.clear()
